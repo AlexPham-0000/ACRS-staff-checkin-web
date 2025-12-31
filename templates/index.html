@@ -122,20 +122,20 @@
           <td>{{ r.time_in.strftime("%Y-%m-%d") }}</td>
 
           <td>
-            {% if r.time_in %}
-              {{ r.time_in.strftime("%I:%M %p") }}
-            {% else %}
-              -
-            {% endif %}
-          </td>
+  {% if r.time_in_local %}
+    {{ r.time_in_local.strftime("%I:%M %p") }}
+  {% else %}
+    -
+  {% endif %}
+</td>
 
-          <td>
-            {% if r.time_out %}
-              {{ r.time_out.strftime("%I:%M %p") }}
-            {% else %}
-              -
-            {% endif %}
-          </td>
+<td>
+  {% if r.time_out_local %}
+    {{ r.time_out_local.strftime("%I:%M %p") }}
+  {% else %}
+    -
+  {% endif %}
+</td>
 
           <td>
             <form method="post"
