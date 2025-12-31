@@ -119,7 +119,7 @@ class CheckIn(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     staff_id = db.Column(db.Integer, db.ForeignKey("staff.id"), nullable=False)
     time_in = db.Column(db.DateTime, nullable=False)
-    time_out = db.Column(db.DateTime)
+    time_out = db.Column(db.DateTime, nullable=True)
     note = db.Column(db.String(255))   # 🆕 Ghi chú
     returned_item = db.Column(db.Boolean, default=False, nullable=False)
 
