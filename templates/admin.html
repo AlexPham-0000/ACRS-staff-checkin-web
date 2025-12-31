@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin – Staff & Records</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1, h2 { margin-bottom: 10px; }
+        table { border-collapse: collapse; width: 100%; max-width: 1000px; margin-bottom: 30px; }
+        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: center; }
+        th { background-color: #f3f3f3; }
+    </style>
+</head>
+<body>
+    <h1>Admin – Staff & Records</h1>
+    <p>
+    <a href="{{ url_for('export_excel') }}" style="font-size:16px; font-weight:bold;">
+        ⬇ Export All Check-ins to Excel
+    </a>
+</p>
+
+    <p><a href="{{ url_for('index') }}">Back to Today Check-ins</a></p>
+
+    <h2>Staff list</h2>
+    <table>
+        <tr>
+            <th>Department</th>
+            <th>Name</th>
+        </tr>
+        {% for s in staff_list %}
+        <tr>
+            <td>{{ s.department }}</td>
+            <td>{{ s.name }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Latest 100 check-ins</h2>
+    <table>
+        <tr>
+    <th>Date</th>
+    <th>Name</th>
+    <th>Department</th>
+    <th>Time In</th>
+    <th>Time Out</th>
+    <th>Actions</th>
+</tr>
+{% for r in records %}
+<tr>
+    <td>{{ r.time_in.date() }}</td>
+    <td>{{ r.staff.name }}</td>
+    <td>{{ r.staff.department }}</td>
+    <td>{{ r.time_in.strftime("%Y-%m-%d %H:%M") }}</td>
+    <td>
+        {% if r.time_out %}
+            {{ r.time_out.strftime("%Y-%m-%d %H:%M") }}
+        {% else %}
+            ---
+        {% endif %}
+    </td>
+    <td>
+        <form method="post" action="{{ url_for('delete_checkin', checkin_id=r.id) }}" style="display:inline;">
+            <button type="submit" onclick="return confirm('Delete this record?');">
+                Delete
+            </button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
+    </table>
+</body>
+</html>
