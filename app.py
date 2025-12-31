@@ -9,6 +9,15 @@ from sqlalchemy import func
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+from datetime import timezone
+from zoneinfo import ZoneInfo
+
+SEA_TZ = ZoneInfo("America/Los_Angeles")
+
+def to_seattle(dt):
+    if not dt:
+        return None
+    return dt.replace(tzinfo=timezone.utc).astimezone(SEA_TZ)
 
 
 app = Flask(__name__)
@@ -289,6 +298,11 @@ def index():
     )
 
     staff_list = ALLOWED_STAFF_NAMES
+
+    for r in records:
+        r.time_in_local = to_seattle(r.time_in)
+        r.time_out_local = to_seattle(r.time_out)
+
     return render_template(
         "index.html",
         records=records,
