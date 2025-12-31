@@ -2,3 +2,4 @@ Flask
 Flask-SQLAlchemy
 python-docx
 gunicorn
+pandas
