@@ -9,15 +9,16 @@ from sqlalchemy import func
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
-from datetime import timezone
 from zoneinfo import ZoneInfo
+from datetime import datetime
+import io
+from flask import send_file
 
 SEA_TZ = ZoneInfo("America/Los_Angeles")
 
-def to_seattle(dt):
-    if not dt:
-        return None
-    return dt.replace(tzinfo=timezone.utc).astimezone(SEA_TZ)
+def now_seattle_naive():
+    return datetime.now(SEA_TZ).replace(tzinfo=None)
+
 
 
 app = Flask(__name__)
@@ -299,10 +300,6 @@ def index():
 
     staff_list = ALLOWED_STAFF_NAMES
 
-    for r in records:
-        r.time_in_local = to_seattle(r.time_in)
-        r.time_out_local = to_seattle(r.time_out)
-
     return render_template(
         "index.html",
         records=records,
@@ -395,6 +392,7 @@ def export_excel():
         rows.append({
             "Name": "",
             "Note": "",
+            "Returned": "",
             "Department": dept,
             "Date": "",
             "Time In": "",
@@ -404,14 +402,14 @@ def export_excel():
         # Các dòng nhân viên của phòng ban đó
         for r in dept_records:
             rows.append({
-            "Name": r.staff.name,
-            "Note": r.note or "",
-            "Returned": ("Yes" if r.returned_item else "No") if (r.note and r.note.strip()) else "",
-            "Department": r.staff.department,
-            "Date": r.time_in.date(),
-            "Time In": r.time_in.strftime("%I:%M %p"),
-            "Time Out": r.time_out.strftime("%I:%M %p") if r.time_out else "",
-        })
+                "Name": r.staff.name,
+                "Note": r.note or "",
+                "Returned": ("Yes" if r.returned_item else "No") if (r.note and r.note.strip()) else "",
+                "Department": r.staff.department,
+                "Date": r.time_in.date(),
+                "Time In": r.time_in.strftime("%I:%M %p"),
+                "Time Out": r.time_out.strftime("%I:%M %p") if r.time_out else "",
+            })
 
         # Dòng trống ngăn cách giữa các department
         rows.append({
@@ -426,89 +424,98 @@ def export_excel():
 
     # Tạo DataFrame với thứ tự cột rõ ràng
     df = pd.DataFrame(
-    rows,
-    columns=["Name", "Note", "Returned", "Department", "Date", "Time In", "Time Out"]
-)
+        rows,
+        columns=["Name", "Note", "Returned", "Department", "Date", "Time In", "Time Out"]
+    )
 
     # ----- Tạo tên file: ACRScheckinMM-DD-YYYY_HHMMSS.xlsx -----
     date_str = today.strftime("%m-%d-%Y")
     time_str = datetime.now().strftime("%H%M%S")
-    filepath = f"ACRScheckin{date_str}_{time_str}.xlsx"
+    filename = f"ACRScheckin{date_str}_{time_str}.xlsx"
 
-    try:
-        # Ghi dữ liệu ra Excel
-        df.to_excel(filepath, index=False)
+    # ====== TẠO EXCEL TRONG BỘ NHỚ (KHÔNG LƯU FILE TRÊN RENDER) ======
+    output = io.BytesIO()
 
-        # ----- Format với openpyxl -----
-        wb = load_workbook(filepath)
-        ws = wb.active
+    # Ghi df vào excel (memory)
+    df.to_excel(output, index=False, engine="openpyxl")
+    output.seek(0)
 
-        center_align = Alignment(horizontal="center", vertical="center")
-        bold_font = Font(bold=True)
+    # Load workbook từ memory để format như bạn đang làm
+    wb = load_workbook(output)
+    ws = wb.active
 
-        header_fill = PatternFill(fill_type="solid", fgColor="D9D9D9")    # xám cho header & dept
-        note_fill = PatternFill(fill_type="solid", fgColor="FFF9C4")      # vàng nhạt cho Note
+    center_align = Alignment(horizontal="center", vertical="center")
+    bold_font = Font(bold=True)
 
-        thin_border = Border(
-            left=Side(style="thin"),
-            right=Side(style="thin"),
-            top=Side(style="thin"),
-            bottom=Side(style="thin"),
-        )
+    header_fill = PatternFill(fill_type="solid", fgColor="D9D9D9")    # xám cho header & dept
+    note_fill = PatternFill(fill_type="solid", fgColor="FFF9C4")      # vàng nhạt cho Note
 
-        max_row = ws.max_row
-        max_col = ws.max_column
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
 
-        for row in ws.iter_rows(min_row=1, max_row=max_row, min_col=1, max_col=max_col):
-            row_idx = row[0].row
+    max_row = ws.max_row
+    max_col = ws.max_column
 
-            # canh giữa + border cho tất cả
+    for row in ws.iter_rows(min_row=1, max_row=max_row, min_col=1, max_col=max_col):
+        row_idx = row[0].row
+
+        # canh giữa + border cho tất cả
+        for cell in row:
+            cell.alignment = center_align
+            cell.border = thin_border
+
+        # Hàng tiêu đề đầu tiên
+        if row_idx == 1:
             for cell in row:
-                cell.alignment = center_align
-                cell.border = thin_border
+                cell.font = bold_font
+                cell.fill = header_fill
+            continue
 
-            # Hàng tiêu đề đầu tiên
-            if row_idx == 1:
-                for cell in row:
-                    cell.font = bold_font
-                    cell.fill = header_fill
-                continue
+        # detect department header rows (Name, Note, Returned, Date, Time In, Time Out trống)
+        name_val = row[0].value
+        note_val = row[1].value
+        returned_val = row[2].value
+        dept_val = row[3].value
+        date_val = row[4].value
+        tin_val = row[5].value
+        tout_val = row[6].value
 
-            # detect department header rows (Name, Note, Date, Time In, Time Out trống)
-            name_val = row[0].value
-            note_val = row[1].value
-            returned_val = row[2].value
-            dept_val = row[3].value
-            date_val = row[4].value
-            tin_val = row[5].value
-            tout_val = row[6].value
+        if (
+            (name_val in [None, ""]) and
+            (note_val in [None, ""]) and
+            (returned_val in [None, ""]) and
+            (date_val in [None, ""]) and
+            (tin_val in [None, ""]) and
+            (tout_val in [None, ""]) and
+            isinstance(dept_val, str) and dept_val in DEPARTMENTS
+        ):
+            for cell in row:
+                cell.font = bold_font
+                cell.fill = header_fill
 
-            if (
-                (name_val in [None, ""]) and
-                (note_val in [None, ""]) and
-                (returned_val in [None, ""]) and
-                (date_val in [None, ""]) and
-                (tin_val in [None, ""]) and
-                (tout_val in [None, ""]) and
-                isinstance(dept_val, str) and dept_val in DEPARTMENTS
-            ):
-                for cell in row:
-                    cell.font = bold_font
-                    cell.fill = header_fill
+    # 🟡 Tô vàng cột Note (col 2) nếu có nội dung
+    for row_idx in range(2, max_row + 1):
+        cell = ws.cell(row=row_idx, column=2)  # column 2 = Note
+        if cell.value not in (None, ""):
+            cell.fill = note_fill
+            cell.alignment = Alignment(horizontal="left", vertical="center")
 
-        # 🟡 Tô vàng cột Note (col 2) nếu có nội dung
-        for row_idx in range(2, max_row + 1):
-            cell = ws.cell(row=row_idx, column=2)  # column 2 = Note
-            if cell.value not in (None, ""):
-                cell.fill = note_fill
-                cell.alignment = Alignment(horizontal="left", vertical="center")
+    # Save workbook formatted -> new memory buffer
+    final_output = io.BytesIO()
+    wb.save(final_output)
+    final_output.seek(0)
 
-        wb.save(filepath)
-
-    except PermissionError:
-        return "Cannot write Excel file. Please close any open Excel file for this export and try again."
-
-    return f"Export successful! File saved as {filepath}"
+    # ✅ TRẢ FILE VỀ BROWSER ĐỂ TẢI XUỐNG
+    return send_file(
+        final_output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @app.route("/toggle_returned/<int:checkin_id>", methods=["POST"])
