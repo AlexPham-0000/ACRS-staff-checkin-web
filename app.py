@@ -14,6 +14,7 @@ from datetime import datetime
 import io
 from flask import send_file
 
+
 SEA_TZ = ZoneInfo("America/Los_Angeles")
 
 def now_seattle_naive():
@@ -304,8 +305,7 @@ def index():
         .all()
     )
 
-    staff_list = ALLOWED_STAFF_NAMES
-
+    staff_list = load_staff_names_from_docx("ACRSstaff_name.docx") 
     return render_template(
         "index.html",
         records=records,
