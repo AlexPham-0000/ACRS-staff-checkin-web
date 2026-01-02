@@ -233,7 +233,7 @@ def index():
 
             ci = CheckIn(
                 staff_id=staff.id,
-                time_in=datetime.now(),
+                time_in=now_seattle_naive(),
                 note=note,
                 returned_item=False,   # ✅ important
             )
@@ -279,7 +279,7 @@ def index():
             flash(f"{name} hasn't returned: {open_checkin.note}")
             return redirect(url_for("index"))
 
-        open_checkin.time_out = datetime.now()
+        open_checkin.time_out = now_seattle_naive()
         db.session.commit()
         flash(f"{name} checked out.")
         return redirect(url_for("index"))
