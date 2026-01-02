@@ -106,12 +106,18 @@ DEPARTMENTS = [
     "CYF",
     "CE",
     "RS",
-    "Admin",
-    "Facility",
-    "Kitchen staffs",
-    "Bamboo Club staffs",
+    "ADMIN",
+    "ADMIN FACILITIES",
+    "KITCHEN",
+    "CLUB BAMBOO",
     "DATA",
-    "Admin General",
+    "ADMIN GENERAL",
+    "HR",
+    "IT",
+    "FINANCE",
+    "DEV",
+    "GENOA",
+
     
 ]
 
