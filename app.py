@@ -42,7 +42,7 @@ def add_staff_to_docx(new_name: str) -> bool:
     if not new_name:
         return False
 
-    # đọc danh sách hiện tại từ đúng file
+    # đọc danh sách hiện tại
     existing = load_staff_names_from_docx(STAFF_DOCX_PATH)
     if any(n.lower() == new_name.lower() for n in existing):
         return False
@@ -55,8 +55,22 @@ def add_staff_to_docx(new_name: str) -> bool:
 
     doc.add_paragraph(new_name)
     doc.save(STAFF_DOCX_PATH)
+
     return True
 
+@app.route("/add_staff_docx", methods=["POST"])
+def add_staff_docx():
+    new_name = request.form.get("new_staff_name", "").strip()
+    print("DOCX names:", load_staff_names_from_docx(STAFF_DOCX_PATH))
+    print("ALLOWED:", ALLOWED_STAFF_NAMES)
+
+    if add_staff_to_docx(new_name):
+        ALLOWED_STAFF_NAMES[:] = load_staff_names_from_docx(STAFF_DOCX_PATH)
+        flash("New staff added to the list!", "success")
+    else:
+        flash("Name already exists or invalid.", "warning")
+
+    return redirect(url_for("index"))
 
 def load_staff_names_from_docx(path: str) -> list[str]:
     names = []
@@ -155,6 +169,7 @@ def index():
 
             # refresh list immediately so it appears in datalist
             ALLOWED_STAFF_NAMES[:] = load_staff_names_from_docx(STAFF_DOCX_PATH)
+            
 
             flash(f"Added new staff: {new_name}")
             return redirect(url_for("index"))
@@ -283,7 +298,7 @@ def index():
         .all()
     )
 
-    staff_list = load_staff_names_from_docx(STAFF_DOCX_PATH) 
+    staff_list = ALLOWED_STAFF_NAMES
     return render_template(
         "index.html",
         records=records,
