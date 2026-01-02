@@ -36,44 +36,22 @@ db = SQLAlchemy(app)
 STAFF_DOCX_PATH = os.path.join(os.path.dirname(__file__), "ACRSstaff_name.docx")
 
 
-def read_staff_from_docx():
-    """Return a clean unique list of staff names from the docx file."""
-    if not os.path.exists(STAFF_DOCX_PATH):
-        return []
-
-    doc = Document(STAFF_DOCX_PATH)
-    names = []
-    for p in doc.paragraphs:
-        t = p.text.strip()
-        if t:
-            names.append(t)
-
-    # unique (case-insensitive) but keep original order
-    seen = set()
-    out = []
-    for n in names:
-        key = n.lower()
-        if key not in seen:
-            seen.add(key)
-            out.append(n)
-    return out
-
-
 def add_staff_to_docx(new_name: str) -> bool:
     """Add a staff name to docx if not exists. Return True if added, False if duplicate."""
     new_name = (new_name or "").strip()
     if not new_name:
         return False
 
-    # Create docx if missing
+    # đọc danh sách hiện tại từ đúng file
+    existing = load_staff_names_from_docx(STAFF_DOCX_PATH)
+    if any(n.lower() == new_name.lower() for n in existing):
+        return False
+
+    # mở file nếu có, không thì tạo mới
     if os.path.exists(STAFF_DOCX_PATH):
         doc = Document(STAFF_DOCX_PATH)
     else:
         doc = Document()
-
-    existing = read_staff_from_docx()
-    if any(n.lower() == new_name.lower() for n in existing):
-        return False
 
     doc.add_paragraph(new_name)
     doc.save(STAFF_DOCX_PATH)
@@ -305,7 +283,7 @@ def index():
         .all()
     )
 
-    staff_list = load_staff_names_from_docx("ACRSstaff_name.docx") 
+    staff_list = load_staff_names_from_docx(STAFF_DOCX_PATH) 
     return render_template(
         "index.html",
         records=records,
