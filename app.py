@@ -58,20 +58,6 @@ def add_staff_to_docx(new_name: str) -> bool:
 
     return True
 
-@app.route("/add_staff_docx", methods=["POST"])
-def add_staff_docx():
-    new_name = request.form.get("new_staff_name", "").strip()
-    print("DOCX names:", load_staff_names_from_docx(STAFF_DOCX_PATH))
-    print("ALLOWED:", ALLOWED_STAFF_NAMES)
-
-    if add_staff_to_docx(new_name):
-        ALLOWED_STAFF_NAMES[:] = load_staff_names_from_docx(STAFF_DOCX_PATH)
-        flash("New staff added to the list!", "success")
-    else:
-        flash("Name already exists or invalid.", "warning")
-
-    return redirect(url_for("index"))
-
 def load_staff_names_from_docx(path: str) -> list[str]:
     names = []
 
