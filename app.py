@@ -20,6 +20,8 @@ SEA_TZ = ZoneInfo("America/Los_Angeles")
 def now_seattle_naive():
     return datetime.now(SEA_TZ).replace(tzinfo=None)
 
+def today_seattle():
+    return now_seattle_naive().date()
 
 
 app = Flask(__name__)
@@ -58,15 +60,24 @@ def add_staff_to_docx(new_name: str) -> bool:
 
     return True
 
+
 def load_staff_names_from_docx(path: str) -> list[str]:
     names = []
 
-    if not os.path.exists(path):
+    # If missing OR empty/broken docx -> create a fresh docx
+    if (not os.path.exists(path)) or (os.path.getsize(path) == 0):
         doc = Document()
         doc.save(path)
         return names
 
-    doc = Document(path)
+    try:
+        doc = Document(path)
+    except Exception:
+        # If file exists but is not a valid .docx (corrupted / not synced)
+        doc = Document()
+        doc.save(path)
+        return names
+
     for p in doc.paragraphs:
         if p.text and p.text.strip():
             names.append(p.text.strip())
@@ -96,8 +107,6 @@ DEPARTMENTS = [
     "FINANCE",
     "DEV",
     "GENOA",
-
-    
 ]
 
 
@@ -135,7 +144,15 @@ def index():
         name = request.form.get("name", "").strip()
         department = request.form.get("department", "").strip()
         note = request.form.get("note", "").strip()
-        action = request.form.get("action")  # "in" or "out" or "add_staff"
+        action = request.form.get("action")  # MUST be before using action
+        new_name = request.form.get("new_staff_name", "").strip()
+
+        if action in ("in", "out"):
+            if not name and new_name:
+                name = new_name
+            if not name:
+                flash("Please enter a name in Name OR Add New Staff.")
+                return redirect(url_for("index"))
 
         # ---------- ADD NEW STAFF (add into original ACRSstaff_name.docx) ----------
         if action == "add_staff":
@@ -155,7 +172,6 @@ def index():
 
             # refresh list immediately so it appears in datalist
             ALLOWED_STAFF_NAMES[:] = load_staff_names_from_docx(STAFF_DOCX_PATH)
-            
 
             flash(f"Added new staff: {new_name}")
             return redirect(url_for("index"))
@@ -165,16 +181,13 @@ def index():
             flash("Please select a department, staff name, and action.")
             return redirect(url_for("index"))
 
-        # 🔒 allow only names from docx
-        normalized = name.lower()
-        allowed_map = {n.lower(): n for n in ALLOWED_STAFF_NAMES}
-        if normalized not in allowed_map:
-            flash(f"No staff named '{name}'. Please choose a name from the suggestions (do not type a new one).")
-            return redirect(url_for("index"))
+        # ✅ FIX: define canonical_name BEFORE using it
+        canonical_name = name
+        today = today_seattle()
+        start = datetime.combine(today, datetime.min.time())
+        end = datetime.combine(today, datetime.max.time())
 
-        canonical_name = allowed_map[normalized]
-        name = canonical_name
-        today = datetime.today().date()
+        print("CHECK IN:", canonical_name, department, now_seattle_naive())
 
         # get/create Staff for this name+department
         staff = Staff.query.filter_by(name=canonical_name, department=department).first()
@@ -190,7 +203,8 @@ def index():
                 CheckIn.query.join(Staff)
                 .filter(
                     func.lower(Staff.name) == canonical_name.lower(),
-                    func.date(CheckIn.time_in) == today,
+                    CheckIn.time_in >= start,
+                    CheckIn.time_in <= end,
                 )
                 .order_by(CheckIn.time_in.desc())
                 .first()
@@ -205,7 +219,8 @@ def index():
                 CheckIn.query
                 .filter(
                     CheckIn.staff_id == staff.id,
-                    func.date(CheckIn.time_in) == today,
+                    CheckIn.time_in >= start,
+                    CheckIn.time_in <= end,
                 )
                 .order_by(CheckIn.time_in.desc())
                 .first()
@@ -216,6 +231,11 @@ def index():
                 else:
                     flash(f"{name} has already checked in and checked out today. No more check-ins allowed today.")
                 return redirect(url_for("index"))
+
+            print("DEBUG CHECK-IN name:", canonical_name)
+            print("DEBUG CHECK-IN dept:", department)
+            print("DEBUG CHECK-IN time_in:", now_seattle_naive())
+            print("DEBUG CHECK-IN today_seattle:", today_seattle())
 
             ci = CheckIn(
                 staff_id=staff.id,
@@ -235,7 +255,8 @@ def index():
                 func.lower(Staff.name) == canonical_name.lower(),
                 Staff.department == department,
                 CheckIn.time_out.is_(None),
-                func.date(CheckIn.time_in) == today,
+                CheckIn.time_in >= start,
+                CheckIn.time_in <= end,
             )
             .order_by(CheckIn.time_in.desc())
             .first()
@@ -247,7 +268,8 @@ def index():
                 .filter(
                     func.lower(Staff.name) == canonical_name.lower(),
                     CheckIn.time_out.is_(None),
-                    func.date(CheckIn.time_in) == today,
+                    CheckIn.time_in >= start,
+                    CheckIn.time_in <= end,
                 )
                 .order_by(CheckIn.time_in.desc())
                 .first()
@@ -272,10 +294,13 @@ def index():
     
 
     # ---------- GET ----------
-    today = datetime.today().date()
+    today = today_seattle()
+    start = datetime.combine(today, datetime.min.time())
+    end = datetime.combine(today, datetime.max.time())
+
     records = (
         CheckIn.query.join(Staff)
-        .filter(func.date(CheckIn.time_in) == today)
+        .filter(CheckIn.time_in >= start, CheckIn.time_in <= end)
         .order_by(
             Staff.department.asc(),
             Staff.name.asc(),
@@ -284,7 +309,9 @@ def index():
         .all()
     )
 
-    staff_list = ALLOWED_STAFF_NAMES
+    db_names = [n for (n,) in db.session.query(Staff.name).distinct().all()]
+    staff_list = sorted(set(ALLOWED_STAFF_NAMES + db_names), key=str.lower)
+
     return render_template(
         "index.html",
         records=records,
@@ -294,7 +321,6 @@ def index():
     )
 
 # --------- Trang admin ---------
-
 @app.route("/admin")
 def admin():
     # danh sách staff
@@ -303,6 +329,8 @@ def admin():
         Staff.name.asc()
     ).all()
 
+    print("DEBUG server datetime.today().date():", datetime.today().date())
+    print("DEBUG seattle today_seattle():", today_seattle())
     # 100 record gần nhất, cũng nhóm theo department + name
     records = (
         CheckIn.query.join(Staff)
@@ -332,7 +360,9 @@ def delete_checkin(checkin_id):
 
     # trở lại trang trước (index hoặc admin)
     return redirect(request.referrer or url_for("index"))
+
 import pandas as pd
+
 @app.route("/delete/<int:record_id>", methods=["POST"])
 def delete_record(record_id):
     record = CheckIn.query.get(record_id)
@@ -349,11 +379,13 @@ def delete_record(record_id):
 @app.route("/export")
 def export_excel():
     # ----- Lấy dữ liệu CHỈ CHO HÔM NAY -----
-    today = datetime.today().date()
+    today = today_seattle()
+    start = datetime.combine(today, datetime.min.time())
+    end = datetime.combine(today, datetime.max.time())
 
     today_records = (
         CheckIn.query.join(Staff)
-        .filter(func.date(CheckIn.time_in) == today)
+        .filter(CheckIn.time_in >= start, CheckIn.time_in <= end)
         .order_by(
             Staff.department.asc(),
             Staff.name.asc(),
@@ -415,7 +447,7 @@ def export_excel():
 
     # ----- Tạo tên file: ACRScheckinMM-DD-YYYY_HHMMSS.xlsx -----
     date_str = today.strftime("%m-%d-%Y")
-    time_str = datetime.now().strftime("%H%M%S")
+    time_str = now_seattle_naive().strftime("%H%M%S")
     filename = f"ACRScheckin{date_str}_{time_str}.xlsx"
 
     # ====== TẠO EXCEL TRONG BỘ NHỚ (KHÔNG LƯU FILE TRÊN RENDER) ======
@@ -510,21 +542,57 @@ def toggle_returned(checkin_id):
     db.session.commit()
     return redirect(url_for("index"))
 
-@app.route("/add_staff_docx", methods=["POST"])
-def add_staff_docx():
+@app.route("/add_staff_db", methods=["POST"])
+def add_staff_db():
     name = request.form.get("new_staff_name", "").strip()
+    department = request.form.get("department", "").strip()
 
-    if not name:
-        flash("Name cannot be empty.", "error")
+    if not name or not department:
+        flash("Please enter name and department.")
         return redirect(url_for("index"))
 
-    added = add_staff_to_docx(name)
-    if not added:
-        flash("This staff name already exists.", "warning")
+    today = today_seattle()
+    start = datetime.combine(today, datetime.min.time())
+    end = datetime.combine(today, datetime.max.time())
+
+    # 1) get/create Staff
+    staff = Staff.query.filter(
+        func.lower(Staff.name) == name.lower(),
+        Staff.department == department
+    ).first()
+
+    if staff is None:
+        staff = Staff(name=name, department=department)
+        db.session.add(staff)
+        db.session.commit()
+
+    # 2) block if already checked in today (same staff+dept)
+    already_today = (
+        CheckIn.query
+        .filter(
+            CheckIn.staff_id == staff.id,
+            CheckIn.time_in >= start,
+            CheckIn.time_in <= end,
+        )
+        .order_by(CheckIn.time_in.desc())
+        .first()
+    )
+    if already_today:
+        flash("This staff is already checked in today.")
         return redirect(url_for("index"))
 
-    flash("New staff added to the list!", "success")
+    # 3) auto check-in now
+    ci = CheckIn(
+        staff_id=staff.id,
+        time_in=now_seattle_naive(),
+        note="",
+        returned_item=False,
+    )
+    db.session.add(ci)
+    db.session.commit()
+
+    flash(f"Added & checked in: {name} ({department})")
     return redirect(url_for("index"))
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)

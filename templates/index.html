@@ -39,37 +39,36 @@
     {% endif %}
   {% endwith %}
 
-  <!-- ✅ FORM 1: Check In / Check Out only -->
-  <form method="post">
-    <label for="department">Department:</label>
-    <select name="department" id="department" required>
-      {% for dept in departments %}
-        <option value="{{ dept }}">{{ dept }}</option>
+  <!-- ✅ ONE shared form: Department + Note + Check In/Out buttons -->
+  <!-- ✅ Two name boxes: Name (existing) + Add New Staff (new) -->
+  <form method="POST" action="{{ url_for('index') }}">
+    <label>Department:</label>
+    <select name="department" required>
+      {% for d in departments %}
+        <option value="{{ d }}">{{ d }}</option>
       {% endfor %}
     </select>
 
-    <label for="name">Name:</label>
-    <input type="text" id="name" name="name" list="staffNames" required>
+    <label>Name:</label>
+    <input type="text" name="name" list="staffNames" placeholder="Choose existing staff">
 
-    <datalist id="staffNames">
-      {% for n in staff_list %}
-        <option value="{{ n }}"></option>
-      {% endfor %}
-    </datalist>
-
-    <label for="note">Note:</label>
-    <input type="text" id="note" name="note" size="25" placeholder="Optional comment">
+    <label>Note:</label>
+    <input type="text" name="note" size="25" placeholder="Optional comment">
 
     <button type="submit" name="action" value="in">Check In</button>
     <button type="submit" name="action" value="out">Check Out</button>
+
+    <br><br>
+
+    <label>Add New Staff:</label>
+    <input type="text" name="new_staff_name" placeholder="Type new staff name">
   </form>
 
-  <!-- ✅ FORM 2: Add New Staff only (separate route, no interference) -->
-  <form method="post" action="{{ url_for('add_staff_docx') }}" style="margin-top: -10px;">
-    <label for="new_staff_name">Add New Staff:</label>
-    <input type="text" id="new_staff_name" name="new_staff_name" size="18" placeholder="New name" required>
-    <button type="submit">Add</button>
-  </form>
+  <datalist id="staffNames">
+    {% for s in staff_list %}
+      <option value="{{ s }}"></option>
+    {% endfor %}
+  </datalist>
 
   <form action="{{ url_for('export_excel') }}" method="get" style="margin-top: 10px;">
     <button type="submit" style="
