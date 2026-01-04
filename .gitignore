@@ -1,5 +1,6 @@
-.venv/
+# local database / files
+*.db
 __pycache__/
 *.pyc
-export.xlsx
-*.docx
+.venv/
+.env
