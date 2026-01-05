@@ -51,14 +51,16 @@
       {% endfor %}
     </select>
 
-    <label>Name:</label>
-    <label for="staff_name">Name:</label>
-    <select name="staff_name" id="staff_name" required>
-    <option value="" disabled selected>Choose existing staff</option>
-    {% for n in staff_names %}
-    <option value="{{ n }}">{{ n }}</option>
-      {% endfor %}
-    </select>
+    <label for="name">Name:</label>
+<input
+  type="text"
+  id="name"
+  name="name"
+  list="staffNames"
+  placeholder="Type to search staff..."
+  autocomplete="off"
+  required
+>
 
     <label>Note:</label>
     <input type="text" name="note" size="25" placeholder="Optional comment">
@@ -73,7 +75,7 @@
   </form>
 
   <datalist id="staffNames">
-    {% for s in staff_list %}
+    {% for s in staff_name %}
       <option value="{{ s }}"></option>
     {% endfor %}
   </datalist>

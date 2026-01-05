@@ -151,6 +151,7 @@ def index():
         note = request.form.get("note", "").strip()
         action = request.form.get("action")  # MUST be before using action
         new_name = request.form.get("new_staff_name", "").strip()
+        staff = Staff.query.filter_by(name=canonical_name, department=department).first()
 
         if action in ("in", "out"):
     # ✅ Do NOT allow using new_staff_name for check-in/out
