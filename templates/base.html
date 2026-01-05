@@ -1,36 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-<meta name="theme-color" content="#b21c1c">
-<meta charset="UTF-8">
-<title>{% block title %}Staff Check-in{% endblock %}</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#b21c1c">
+  <meta charset="UTF-8">
+  <title>{% block title %}Staff Check-in{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
-<script>
-  console.log("PWA script loaded");
 
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/static/service-worker.js")
-        .then((reg) => console.log("SW registered:", reg.scope))
-        .catch((err) => console.error("SW register failed:", err));
-    });
-  } else {
-    console.log("ServiceWorker not supported");
-  }
-</script>
 <body>
-<header class="topbar">
-<div class="logo">Staff Check-in</div>
-<nav class="nav">
-<a href="{{ url_for('index') }}">Today</a>
-<a href="{{ url_for('admin') }}">Admin</a>
-</nav>
-</header>
+  <header class="topbar">
+    <div class="logo">Staff Check-in</div>
+    <nav class="nav">
+      <a href="{{ url_for('index') }}">Today</a>
+      <a href="{{ url_for('admin') }}">Admin</a>
+    </nav>
+  </header>
 
-<main class="main-content">
-{% block content %}{% endblock %}
-</main>
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ✅ PWA: register service worker (must be inside body, before closing body) -->
+  <script>
+    console.log("PWA script loaded");
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/static/service-worker.js")
+          .then((reg) => console.log("SW registered:", reg.scope))
+          .catch((err) => console.error("SW register failed:", err));
+      });
+    } else {
+      console.log("ServiceWorker not supported");
+    }
+  </script>
 </body>
 </html>
