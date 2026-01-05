@@ -97,7 +97,17 @@
         <th>Action</th>
       </tr>
     </thead>
+    <script>
+  console.log("PWA script loaded");
 
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/static/service-worker.js")
+        .then((reg) => console.log("SW registered:", reg.scope))
+        .catch((err) => console.error("SW register failed:", err));
+    });
+  }
+</script>
     <tbody>
   {% for r in records %}
     <tr>

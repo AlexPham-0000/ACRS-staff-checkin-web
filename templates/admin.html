@@ -11,6 +11,19 @@
         th { background-color: #f3f3f3; }
     </style>
 </head>
+
+<script>
+  console.log("PWA script loaded");
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/static/service-worker.js")
+        .then((reg) => console.log("SW registered:", reg.scope))
+        .catch((err) => console.error("SW register failed:", err));
+    });
+  }
+</script>
+
 <body>
     <h1>Admin – Staff & Records</h1>
     <p>
