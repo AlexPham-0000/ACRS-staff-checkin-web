@@ -7,6 +7,15 @@
 <title>{% block title %}Staff Check-in{% endblock %}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register(
+        "{{ url_for('static', filename='service-worker.js') }}"
+      );
+    });
+  }
+</script>
 <body>
 <header class="topbar">
 <div class="logo">Staff Check-in</div>
