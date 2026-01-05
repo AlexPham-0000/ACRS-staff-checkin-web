@@ -326,6 +326,7 @@ def index():
         today=today,
         departments=DEPARTMENTS,
         staff_list=staff_list,
+        staff_names=ALLOWED_STAFF_NAMES # ✅ add this
     )
 
 # --------- Trang admin ---------
