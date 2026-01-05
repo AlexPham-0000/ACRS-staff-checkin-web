@@ -41,6 +41,7 @@ STAFF_DOCX_PATH = os.path.join(os.path.dirname(__file__), "ACRSstaff_name.docx")
 STAFF_DOCX_PATH = "ACRSstaff_name.docx"
 
 
+
 def add_staff_to_docx(new_name: str) -> bool:
     """Add a staff name to docx if not exists. Return True if added, False if duplicate."""
     new_name = (new_name or "").strip()
@@ -62,6 +63,7 @@ def add_staff_to_docx(new_name: str) -> bool:
     doc.save(STAFF_DOCX_PATH)
 
     return True
+
 
 
 def load_staff_names_from_docx(path: str) -> list[str]:
