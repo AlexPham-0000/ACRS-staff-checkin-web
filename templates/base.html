@@ -8,12 +8,16 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <script>
+  console.log("PWA script loaded");
+
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register(
-        "{{ url_for('static', filename='service-worker.js') }}"
-      );
+      navigator.serviceWorker.register("/static/service-worker.js")
+        .then((reg) => console.log("SW registered:", reg.scope))
+        .catch((err) => console.error("SW register failed:", err));
     });
+  } else {
+    console.log("ServiceWorker not supported");
   }
 </script>
 <body>
