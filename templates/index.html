@@ -51,16 +51,17 @@
       {% endfor %}
     </select>
 
+    <!-- ✅ FIXED: Type-to-search + suggestions -->
     <label for="name">Name:</label>
-<input
-  type="text"
-  id="name"
-  name="name"
-  list="staffNames"
-  placeholder="Type to search staff..."
-  autocomplete="off"
-  required
->
+    <input
+      type="text"
+      id="name"
+      name="name"
+      list="staffNames"
+      placeholder="Choose existing staff"
+      autocomplete="off"
+      required
+    >
 
     <label>Note:</label>
     <input type="text" name="note" size="25" placeholder="Optional comment">
@@ -74,8 +75,9 @@
     <input type="text" name="new_staff_name" placeholder="Type new staff name">
   </form>
 
+  <!-- ✅ FIXED: suggestions come from staff_names -->
   <datalist id="staffNames">
-    {% for s in staff_name %}
+    {% for s in staff_names %}
       <option value="{{ s }}"></option>
     {% endfor %}
   </datalist>
