@@ -15,6 +15,7 @@ import io
 from flask import send_file
 
 
+
 SEA_TZ = ZoneInfo("America/Los_Angeles")
 
 def now_seattle_naive():
@@ -593,6 +594,15 @@ def add_staff_db():
 
     flash(f"Added & checked in: {name} ({department})")
     return redirect(url_for("index"))
+
+from flask import send_from_directory
+
+from flask import send_from_directory
+
+@app.route("/service-worker.js")
+def service_worker():
+    return send_from_directory("static", "service-worker.js")
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
