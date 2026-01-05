@@ -1,6 +1,11 @@
-# local database / files
-*.db
+# virtual env
+.venv/
 __pycache__/
 *.pyc
-.venv/
-.env
+
+# local database / files
+*.db
+*.docx
+
+# OS
+.DS_Store
