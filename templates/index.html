@@ -52,7 +52,13 @@
     </select>
 
     <label>Name:</label>
-    <input type="text" name="name" list="staffNames" placeholder="Choose existing staff">
+    <label for="staff_name">Name:</label>
+    <select name="staff_name" id="staff_name" required>
+    <option value="" disabled selected>Choose existing staff</option>
+    {% for n in staff_names %}
+    <option value="{{ n }}">{{ n }}</option>
+      {% endfor %}
+    </select>
 
     <label>Note:</label>
     <input type="text" name="note" size="25" placeholder="Optional comment">

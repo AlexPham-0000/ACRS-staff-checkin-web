@@ -38,6 +38,8 @@ db = SQLAlchemy(app)
 # Đường dẫn đến file danh sách nhân viên
 STAFF_DOCX_PATH = os.path.join(os.path.dirname(__file__), "ACRSstaff_name.docx")
 
+STAFF_DOCX_PATH = "ACRSstaff_name.docx"
+
 
 def add_staff_to_docx(new_name: str) -> bool:
     """Add a staff name to docx if not exists. Return True if added, False if duplicate."""
@@ -149,10 +151,15 @@ def index():
         new_name = request.form.get("new_staff_name", "").strip()
 
         if action in ("in", "out"):
-            if not name and new_name:
-                name = new_name
+    # ✅ Do NOT allow using new_staff_name for check-in/out
             if not name:
-                flash("Please enter a name in Name OR Add New Staff.")
+                flash("Please choose an existing staff name.")
+                return redirect(url_for("index"))
+
+    # ✅ Restrict to names from ACRSstaff_name.docx only
+            allowed_lower = {n.lower() for n in ALLOWED_STAFF_NAMES}
+            if name.lower() not in allowed_lower:
+                flash("Name not found in existing staff list. Please use 'Add New Staff' to add them.")
                 return redirect(url_for("index"))
 
         # ---------- ADD NEW STAFF (add into original ACRSstaff_name.docx) ----------
