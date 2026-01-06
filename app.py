@@ -144,61 +144,50 @@ with app.app_context():
 # --------- Trang chính: Today Check-ins ---------
 @app.route("/", methods=["GET", "POST"])
 def index():
-    
+
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
+        name = (request.form.get("name") or request.form.get("staff_name") or "").strip()
         department = request.form.get("department", "").strip()
         note = request.form.get("note", "").strip()
-        action = request.form.get("action")  # MUST be before using action
+        action = request.form.get("action")
         new_name = request.form.get("new_staff_name", "").strip()
-        staff = Staff.query.filter_by(name=canonical_name, department=department).first()
 
-        if action in ("in", "out"):
-    # ✅ Do NOT allow using new_staff_name for check-in/out
-            if not name:
-                flash("Please choose an existing staff name.")
-                return redirect(url_for("index"))
+        using_new = bool(new_name)
+        using_existing = bool(name)
 
-    # ✅ Restrict to names from ACRSstaff_name.docx only
+        # Must not fill both
+        if using_new and using_existing:
+            flash("Please use ONLY ONE: choose an existing staff OR type a new staff name (not both).")
+            return redirect(url_for("index"))
+
+        # Decide which name to use
+        chosen_name = new_name if using_new else name
+
+        # Validate action + department + name
+        if action not in ("in", "out"):
+            flash("Please select an action.")
+            return redirect(url_for("index"))
+
+        if not department:
+            flash("Please select a department.")
+            return redirect(url_for("index"))
+
+        if not chosen_name:
+            flash("Please choose an existing staff name or type a new one.")
+            return redirect(url_for("index"))
+
+        # ✅ Existing name must be in DOCX list
+        if not using_new:
             allowed_lower = {n.lower() for n in ALLOWED_STAFF_NAMES}
-            if name.lower() not in allowed_lower:
-                flash("Name not found in existing staff list. Please use 'Add New Staff' to add them.")
+            if chosen_name.lower() not in allowed_lower:
+                flash("Name not found in ACRSstaff_name.docx. Use 'Add New Staff' box for new names.")
                 return redirect(url_for("index"))
 
-        # ---------- ADD NEW STAFF (add into original ACRSstaff_name.docx) ----------
-        if action == "add_staff":
-            new_name = request.form.get("new_staff_name", "").strip()
-            if not new_name:
-                flash("Please enter a new staff name.")
-                return redirect(url_for("index"))
+        canonical_name = chosen_name
 
-            existing_lower = {n.lower() for n in ALLOWED_STAFF_NAMES}
-            if new_name.lower() in existing_lower:
-                flash(f"'{new_name}' is already in the staff list.")
-                return redirect(url_for("index"))
-
-            doc = Document(STAFF_DOCX_PATH)
-            doc.add_paragraph(new_name)
-            doc.save(STAFF_DOCX_PATH)
-
-            # refresh list immediately so it appears in datalist
-            ALLOWED_STAFF_NAMES[:] = load_staff_names_from_docx(STAFF_DOCX_PATH)
-
-            flash(f"Added new staff: {new_name}")
-            return redirect(url_for("index"))
-        # -----------------------------------------------------------------------
-
-        if not name or not department or action not in ("in", "out", "add_staff"):
-            flash("Please select a department, staff name, and action.")
-            return redirect(url_for("index"))
-
-        # ✅ FIX: define canonical_name BEFORE using it
-        canonical_name = name
         today = today_seattle()
         start = datetime.combine(today, datetime.min.time())
         end = datetime.combine(today, datetime.max.time())
-
-        print("CHECK IN:", canonical_name, department, now_seattle_naive())
 
         # get/create Staff for this name+department
         staff = Staff.query.filter_by(name=canonical_name, department=department).first()
@@ -238,25 +227,20 @@ def index():
             )
             if latest_today:
                 if latest_today.time_out is None:
-                    flash(f"{name} already checked in today and has not checked out yet.")
+                    flash(f"{canonical_name} already checked in today and has not checked out yet.")
                 else:
-                    flash(f"{name} has already checked in and checked out today. No more check-ins allowed today.")
+                    flash(f"{canonical_name} has already checked in and checked out today. No more check-ins allowed today.")
                 return redirect(url_for("index"))
-
-            print("DEBUG CHECK-IN name:", canonical_name)
-            print("DEBUG CHECK-IN dept:", department)
-            print("DEBUG CHECK-IN time_in:", now_seattle_naive())
-            print("DEBUG CHECK-IN today_seattle:", today_seattle())
 
             ci = CheckIn(
                 staff_id=staff.id,
                 time_in=now_seattle_naive(),
                 note=note,
-                returned_item=False,   # ✅ important
+                returned_item=False,
             )
             db.session.add(ci)
             db.session.commit()
-            flash(f"{name} checked in.")
+            flash(f"{canonical_name} checked in.")
             return redirect(url_for("index"))
 
         # ---------- CHECK OUT ----------
@@ -290,19 +274,18 @@ def index():
                 flash(f"{canonical_name} is checked in under department '{existing_dept}'. Please select that department to check out.")
                 return redirect(url_for("index"))
 
-            flash(f"{name} has not checked in today, so there is nothing to check out.")
+            flash(f"{canonical_name} has not checked in today, so there is nothing to check out.")
             return redirect(url_for("index"))
 
         # block checkout if borrowed item noted but not returned
         if (open_checkin.note and open_checkin.note.strip()) and (not open_checkin.returned_item):
-            flash(f"{name} hasn't returned: {open_checkin.note}")
+            flash(f"{canonical_name} hasn't returned: {open_checkin.note}")
             return redirect(url_for("index"))
 
         open_checkin.time_out = now_seattle_naive()
         db.session.commit()
-        flash(f"{name} checked out.")
+        flash(f"{canonical_name} checked out.")
         return redirect(url_for("index"))
-    
 
     # ---------- GET ----------
     today = today_seattle()
@@ -329,7 +312,7 @@ def index():
         today=today,
         departments=DEPARTMENTS,
         staff_list=staff_list,
-        staff_names=ALLOWED_STAFF_NAMES # ✅ add this
+        staff_names=ALLOWED_STAFF_NAMES
     )
 
 # --------- Trang admin ---------
@@ -361,17 +344,6 @@ def admin():
         records=records,
     )
 
-# --------- Xoá 1 check-in (nếu bấm nhầm) ---------
-@app.route("/delete/<int:checkin_id>", methods=["POST"])
-def delete_checkin(checkin_id):
-    ci = CheckIn.query.get(checkin_id)
-    if ci:
-        db.session.delete(ci)
-        db.session.commit()
-        return redirect(url_for("index"))
-
-    # trở lại trang trước (index hoặc admin)
-    return redirect(request.referrer or url_for("index"))
 
 import pandas as pd
 
