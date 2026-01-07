@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from datetime import datetime
 import io
 from flask import send_file
+from datetime import time as dtime
 
 
 
@@ -585,6 +586,70 @@ from flask import send_from_directory
 @app.route("/service-worker.js")
 def service_worker():
     return send_from_directory("static", "service-worker.js")
+
+@app.route("/edit_time/<int:checkin_id>", methods=["POST"])
+def edit_time(checkin_id):
+    ci = CheckIn.query.get_or_404(checkin_id)
+
+    which = (request.form.get("which") or "").strip().lower()   # "in" or "out"
+    tstr = (request.form.get("time") or "").strip()             # "09:15" or "9:15 AM"
+
+    if which not in ("in", "out"):
+        flash("Invalid edit request.")
+        return redirect(url_for("index"))
+
+    if not tstr:
+        flash("Please enter a time.")
+        return redirect(url_for("index"))
+
+    # Parse time formats:
+    parsed = None
+    for fmt in ("%H:%M", "%I:%M %p", "%I:%M%p"):
+        try:
+            parsed = datetime.strptime(tstr.upper(), fmt).time()
+            break
+        except ValueError:
+            pass
+
+    if parsed is None:
+        flash("Time format wrong. Use 09:15 or 9:15 AM.")
+        return redirect(url_for("index"))
+
+    # Keep the SAME DATE, only change the time part
+    if which == "in":
+        old_dt = ci.time_in
+        if not old_dt:
+            flash("No Time In to edit.")
+            return redirect(url_for("index"))
+        ci.time_in = datetime.combine(old_dt.date(), parsed)
+
+        # optional safety: if time_out exists and becomes earlier than time_in, warn
+        if ci.time_out and ci.time_out < ci.time_in:
+            flash("Warning: Time Out is earlier than Time In.")
+
+    else:  # which == "out"
+        if not ci.time_out:
+            flash("No Time Out yet. Check out first, then edit.")
+            return redirect(url_for("index"))
+        old_dt = ci.time_out
+        ci.time_out = datetime.combine(old_dt.date(), parsed)
+
+        if ci.time_in and ci.time_out < ci.time_in:
+            flash("Time Out cannot be earlier than Time In.")
+            return redirect(url_for("index"))
+
+    db.session.commit()
+    flash("Time updated.")
+    return redirect(url_for("index"))
+
+@app.route("/version")
+def version():
+    last_id = db.session.query(func.max(CheckIn.id)).scalar() or 0
+    last_in = db.session.query(func.max(CheckIn.time_in)).scalar()
+    last_out = db.session.query(func.max(CheckIn.time_out)).scalar()
+
+    # convert None to empty string
+    return f"{last_id}|{last_in or ''}|{last_out or ''}"
 
 
 if __name__ == "__main__":

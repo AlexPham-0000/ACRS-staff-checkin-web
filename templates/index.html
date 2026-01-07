@@ -121,11 +121,49 @@
 </script>
 
 <script>
-  // Auto refresh page every 3 seconds
-  setInterval(() => {
-    window.location.reload();
-  }, 10000);
+  function toggleEdit(id) {
+    const el = document.getElementById(id);
+    el.style.display = (el.style.display === "none" || !el.style.display) ? "block" : "none";
+  }
 </script>
+
+<script>
+  let lastVersion = null;
+  let isEditing = false;
+
+  document.addEventListener("focusin", (e) => {
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA")) {
+      isEditing = true;
+    }
+  });
+
+  document.addEventListener("focusout", () => {
+    setTimeout(() => {
+      const active = document.activeElement;
+      isEditing = !!active && (active.tagName === "INPUT" || active.tagName === "SELECT" || active.tagName === "TEXTAREA");
+    }, 200);
+  });
+
+  async function checkVersion() {
+    try {
+      const r = await fetch("/version", { cache: "no-store" });
+      const v = (await r.text()).trim();
+
+      if (lastVersion === null) {
+        lastVersion = v;
+        return;
+      }
+
+      if (v !== lastVersion && !isEditing) {
+        location.reload();
+      }
+    } catch (e) {}
+  }
+
+  setInterval(checkVersion, 3000);
+  checkVersion();
+</script>
+
 
     <tbody>
   {% for r in records %}
@@ -158,24 +196,71 @@
       </td>
 
       <!-- ✅ Time In (fallback local -> normal) -->
-      <td>
-        {% set ti = r.time_in_local if r.time_in_local else r.time_in %}
-        {% if ti %}
-          {{ ti.strftime("%I:%M %p") }}
-        {% else %}
-          -
-        {% endif %}
-      </td>
+     <td>
+  {% set ti = r.time_in_local if r.time_in_local else r.time_in %}
+  {% if ti %}
+    {{ ti.strftime("%I:%M %p") }}
+  {% else %}
+    -
+  {% endif %}
+
+  <button type="button"
+          onclick="toggleEdit('in-{{ r.id }}')"
+          style="margin-left:8px; padding:2px 8px;">
+    Edit
+  </button>
+
+  <form id="in-{{ r.id }}"
+        method="post"
+        action="{{ url_for('edit_time', checkin_id=r.id) }}"
+        style="display:none; margin-top:6px;">
+    <input type="hidden" name="which" value="in">
+
+    <!-- type the time with AM/PM like: 3:00 PM -->
+    <input type="text" name="time" placeholder="HH:MM AM/PM (ex: 3:05 PM)" size="18" required>
+
+    <button type="submit" style="padding:2px 8px;">Save</button>
+    <button type="button"
+            onclick="toggleEdit('in-{{ r.id }}')"
+            style="padding:2px 8px;">
+      Cancel
+    </button>
+  </form>
+</td>
 
       <!-- ✅ Time Out (fallback local -> normal) -->
       <td>
-        {% set to = r.time_out_local if r.time_out_local else r.time_out %}
-        {% if to %}
-          {{ to.strftime("%I:%M %p") }}
-        {% else %}
-          -
-        {% endif %}
-      </td>
+  {% set to = r.time_out_local if r.time_out_local else r.time_out %}
+  {% if to %}
+    {{ to.strftime("%I:%M %p") }}
+  {% else %}
+    -
+  {% endif %}
+
+  <button type="button"
+          onclick="toggleEdit('out-{{ r.id }}')"
+          style="margin-left:8px; padding:2px 8px;">
+    Edit
+  </button>
+
+  <form id="out-{{ r.id }}"
+        method="post"
+        action="{{ url_for('edit_time', checkin_id=r.id) }}"
+        style="display:none; margin-top:6px;">
+    <input type="hidden" name="which" value="out">
+
+    <!-- type time with AM/PM like: 3:00 PM -->
+    <input type="text" name="time" placeholder="HH:MM AM/PM (ex: 3:05 PM)" size="18" required>
+
+    <button type="submit" style="padding:2px 8px;">Save</button>
+    <button type="button"
+            onclick="toggleEdit('out-{{ r.id }}')"
+            style="padding:2px 8px;">
+      Cancel
+    </button>
+  </form>
+</td>
+
 
       <td>
         <form method="post"
@@ -191,5 +276,18 @@
   {% endfor %}
 </tbody>
   </table>
+
+  <!-- ✅ toggle edit time -->
+  <script>
+    function toggleEdit(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.display =
+        (el.style.display === "none" || el.style.display === "")
+          ? "block"
+          : "none";
+    }
+  </script>
+
 </body>
 </html>
