@@ -30,9 +30,19 @@ app = Flask(__name__)
 
 app.secret_key = "change-this-secret"
 # --------- Cấu hình database (SQLite) ---------
-basedir = os.path.abspath(os.path.dirname(__file__))
-db_path = os.path.join(basedir, "staff_checkin.db")
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + db_path
+db_url = os.environ.get("DATABASE_URL")
+
+# Render may provide postgres:// but SQLAlchemy needs postgresql://
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+if db_url:
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+else:
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    db_path = os.path.join(basedir, "staff_checkin.db")
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + db_path
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
