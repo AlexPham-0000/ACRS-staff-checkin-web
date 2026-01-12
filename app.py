@@ -609,20 +609,15 @@ def edit_time(checkin_id):
 
     t_upper = tstr.strip().upper()
 
-    # ✅ Allow typing NO (save as 12:00 AM)
+# ✅ If user types NO, store as 12:00 AM so it's saved and visible
     if t_upper == "NO":
-        today = today_seattle()
+        no_time = dtime(0, 0)  # 00:00
+        base_date = (ci.time_in.date() if ci.time_in else today_seattle())
 
         if which == "in":
-            base_date = ci.time_in.date() if ci.time_in else today
-            ci.time_in = datetime.combine(base_date, NO_TIME)
-        else:  # which == "out"
-            # use time_out date if exists, else use time_in date if exists, else today
-            base_date = (
-                ci.time_out.date() if ci.time_out else
-                (ci.time_in.date() if ci.time_in else today)
-            )
-            ci.time_out = datetime.combine(base_date, NO_TIME)
+            ci.time_in = datetime.combine(base_date, no_time)
+        else:  # out
+            ci.time_out = datetime.combine(base_date, no_time)
 
         db.session.commit()
         flash("Saved as NO.")

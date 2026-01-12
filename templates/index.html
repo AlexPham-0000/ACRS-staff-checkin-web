@@ -141,7 +141,8 @@
 
           <!-- ✅ Time In -->
           <td>
-              {% if ti %}
+              {% set ti = r.time_in %}
+{% if ti %}
   {% if ti.strftime("%H:%M") == "00:00" %}
     NO
   {% else %}
@@ -174,15 +175,16 @@
 
           <!-- ✅ Time Out -->
           <td>
+            {% set to = r.time_out %}
             {% if to %}
-  {% if to.strftime("%H:%M") == "00:00" %}
-    NO
-  {% else %}
-    {{ to.strftime("%I:%M %p") }}
-  {% endif %}
-{% else %}
-  -
-{% endif %}
+            {% if to.strftime("%H:%M") == "00:00" %}
+              NO
+            {% else %}
+              {{ to.strftime("%I:%M %p") }}
+            {% endif %}
+            {% else %}
+             -
+            {% endif %}
 
             <button type="button"
                     onclick="toggleEdit('out-{{ r.id }}')"
