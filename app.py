@@ -313,20 +313,8 @@ def index():
         )
         .all()
     )
-    # ✅ PIN NOTE STAFF TO TOP
+    ## ✅ PIN NOTE STAFF TO TOP
     records = sorted(records, key=lambda r: 0 if (r.note and r.note.strip()) else 1)
-
-    db_names = [n for (n,) in db.session.query(Staff.name).distinct().all()]
-    staff_list = sorted(set(ALLOWED_STAFF_NAMES + db_names), key=str.lower)
-
-    return render_template(
-        "index.html",
-        records=records,
-        today=today,
-        departments=DEPARTMENTS,
-        staff_list=staff_list,
-        staff_names=ALLOWED_STAFF_NAMES
-    )
 
 # --------- Trang admin ---------
 @app.route("/admin")
@@ -653,21 +641,6 @@ def edit_time(checkin_id):
     db.session.commit()
     flash("Time updated.")
     return redirect(url_for("index"))
-@app.route("/edit_note/<int:checkin_id>", methods=["POST"])
-def edit_note(checkin_id):
-    ci = CheckIn.query.get_or_404(checkin_id)
-    new_note = (request.form.get("note") or "").strip()
-
-    ci.note = new_note
-
-    # Optional: if note exists, mark returned_item = False so it highlights until checked
-    if new_note:
-        ci.returned_item = False
-
-    db.session.commit()
-    flash("Note updated.")
-    return redirect(url_for("index"))
-
 
 @app.route("/version")
 def version():
