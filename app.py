@@ -129,7 +129,7 @@ class Staff(db.Model):
 class CheckIn(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     staff_id = db.Column(db.Integer, db.ForeignKey("staff.id"), nullable=False)
-    time_in = db.Column(db.DateTime, nullable=False)
+    time_in = db.Column(db.DateTime, nullable=True)
     time_out = db.Column(db.DateTime, nullable=True)
     note = db.Column(db.String(255))   # 🆕 Ghi chú
     returned_item = db.Column(db.Boolean, default=False, nullable=False)
@@ -591,36 +591,30 @@ def edit_time(checkin_id):
     ci = CheckIn.query.get_or_404(checkin_id)
 
     which = (request.form.get("which") or "").strip().lower()   # "in" or "out"
-    tstr = (request.form.get("time") or "").strip()             # "09:15" or "9:15 AM" or "NO"
+    tstr = (request.form.get("time") or "").strip()
 
     if which not in ("in", "out"):
         flash("Invalid edit request.")
         return redirect(url_for("index"))
 
     if not tstr:
-        flash("Please enter a time (or type NO).")
+        flash("Please enter a time or type NO.")
         return redirect(url_for("index"))
 
-    t_upper = tstr.strip().upper()
+    t_upper = tstr.upper().strip()
 
-    # ✅ NEW: allow typing NO
+    # ✅ NO -> set that time field to None (không đụng note)
     if t_upper == "NO":
-        note_txt = ci.note or ""
-        if which == "out":
+        if which == "in":
+            ci.time_in = None
+        else:
             ci.time_out = None
-            if "." not in note_txt:
-                ci.note = (note_txt + ".").strip()
-            db.session.commit()
-            flash("Time Out set to NO.")
-            return redirect(url_for("index"))
-        else:  # which == "in"
-            if "." not in note_txt:
-                ci.note = (note_txt + ".").strip()
-            db.session.commit()
-            flash("Time In marked as NO.")
-            return redirect(url_for("index"))
 
-    # Parse time formats:
+        db.session.commit()
+        flash("Saved as NO.")
+        return redirect(url_for("index"))
+
+    # Parse time formats
     parsed = None
     for fmt in ("%H:%M", "%I:%M %p", "%I:%M%p"):
         try:
@@ -633,23 +627,14 @@ def edit_time(checkin_id):
         flash("Time format wrong. Use 09:15 or 9:15 AM, or type NO.")
         return redirect(url_for("index"))
 
-    # Keep the SAME DATE, only change the time part
+    today = today_seattle()
+
     if which == "in":
-        old_dt = ci.time_in
-        if not old_dt:
-            flash("No Time In to edit.")
-            return redirect(url_for("index"))
-        ci.time_in = datetime.combine(old_dt.date(), parsed)
-
-        if ci.time_out and ci.time_out < ci.time_in:
-            flash("Warning: Time Out is earlier than Time In.")
-
-    else:  # which == "out"
-        if not ci.time_out:
-            flash("No Time Out yet. Check out first, then edit. (Or type NO to mark it.)")
-            return redirect(url_for("index"))
-        old_dt = ci.time_out
-        ci.time_out = datetime.combine(old_dt.date(), parsed)
+        use_date = ci.time_in.date() if ci.time_in else today
+        ci.time_in = datetime.combine(use_date, parsed)
+    else:
+        use_date = ci.time_out.date() if ci.time_out else today
+        ci.time_out = datetime.combine(use_date, parsed)
 
         if ci.time_in and ci.time_out < ci.time_in:
             flash("Time Out cannot be earlier than Time In.")
