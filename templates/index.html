@@ -144,7 +144,7 @@
               {% if r.time_in %}
                 {{ r.time_in.strftime("%I:%M %p") }}
               {% else %}
-                --
+                NO
               {% endif %}
 
             <button type="button"
@@ -173,7 +173,7 @@
             {% if r.time_out %}
               {{ r.time_out.strftime("%I:%M %p") }}
             {% else %}
-              --
+              NO
             {% endif %}
 
             <button type="button"
