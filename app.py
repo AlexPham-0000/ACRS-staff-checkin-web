@@ -608,10 +608,14 @@ def edit_time(checkin_id):
         note_txt = ci.note or ""
         if which == "out":
             ci.time_out = None
+            if "[ ]" not in note_txt:
+                ci.note = (note_txt + " [ ]").strip()
             db.session.commit()
             flash("Time Out set to NO.")
             return redirect(url_for("index"))
         else:  # which == "in"
+            if "[ ]" not in note_txt:
+                ci.note = (note_txt + " [ ]").strip()
             db.session.commit()
             flash("Time In marked as NO.")
             return redirect(url_for("index"))
