@@ -313,6 +313,16 @@ def index():
         )
         .all()
     )
+    # ✅ Put all records with Note on TOP (keep the rest order same)
+    records = sorted(
+    records,
+    key=lambda r: (
+        0 if (r.note and r.note.strip()) else 1,                 # note first
+        (r.staff.department or "").lower(),
+        (r.staff.name or "").lower(),
+        r.time_in or datetime.min
+    )
+)
 
     db_names = [n for (n,) in db.session.query(Staff.name).distinct().all()]
     staff_list = sorted(set(ALLOWED_STAFF_NAMES + db_names), key=str.lower)
