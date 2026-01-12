@@ -172,13 +172,13 @@
 
           <!-- ✅ Time Out -->
           <td>
-            {% if r.note and "[NO IN]" in r.note %}
-              NO
-            {% elif r.time_in %}
-              {{ r.time_in.strftime("%I:%M %p") }}
-            {% else %}
-              -
-            {% endif %}
+            {% if r.note and "[NO OUT]" in r.note %}
+  NO
+{% elif r.time_out %}
+  {{ r.time_out.strftime("%I:%M %p") }}
+{% else %}
+  -
+{% endif %}
 
             <button type="button"
                     onclick="toggleEdit('out-{{ r.id }}')"
