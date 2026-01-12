@@ -129,11 +129,10 @@ class Staff(db.Model):
 class CheckIn(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     staff_id = db.Column(db.Integer, db.ForeignKey("staff.id"), nullable=False)
-    time_in = db.Column(db.DateTime, nullable=True)
+    time_in = db.Column(db.DateTime, nullable=False)
     time_out = db.Column(db.DateTime, nullable=True)
     note = db.Column(db.String(255))   # 🆕 Ghi chú
     returned_item = db.Column(db.Boolean, default=False, nullable=False)
-    
 
     staff = db.relationship("Staff", backref=db.backref("checkins", lazy=True))
 
@@ -604,16 +603,22 @@ def edit_time(checkin_id):
 
     t_upper = tstr.strip().upper()
 
-    # ✅ allow typing NO (do NOT touch note)
+    # ✅ NEW: allow typing NO
     if t_upper == "NO":
-        if which == "in":
-            ci.time_in = None
-        else:  # which == "out"
+        note_txt = ci.note or ""
+        if which == "out":
             ci.time_out = None
-
-    db.session.commit()
-    flash("Saved as NO.")
-    return redirect(url_for("index"))
+            if "." not in note_txt:
+                ci.note = (note_txt + ".").strip()
+            db.session.commit()
+            flash("Time Out set to NO.")
+            return redirect(url_for("index"))
+        else:  # which == "in"
+            if "." not in note_txt:
+                ci.note = (note_txt + ".").strip()
+            db.session.commit()
+            flash("Time In marked as NO.")
+            return redirect(url_for("index"))
 
     # Parse time formats:
     parsed = None
