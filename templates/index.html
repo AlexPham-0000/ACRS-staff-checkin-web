@@ -141,61 +141,62 @@
 
           <!-- ✅ Time In -->
           <td>
-  {% if r.time_in %}
-    {% if r.time_in.strftime("%H:%M") == "00:00" %}
-      NO
-    {% else %}
-      {{ r.time_in.strftime("%I:%M %p") }}
-    {% endif %}
-  {% else %}
-    -
-  {% endif %}
+              {% if r.time_in %}
+                {{ r.time_in.strftime("%I:%M %p") }}
+              {% else %}
+                --
+              {% endif %}
 
-  <button type="button"
-          onclick="toggleEdit('in-{{ r.id }}')"
-          style="margin-left:8px; padding:2px 8px;">
-    Edit
-  </button>
+            <button type="button"
+                    onclick="toggleEdit('in-{{ r.id }}')"
+                    style="margin-left:8px; padding:2px 8px;">
+              Edit
+            </button>
 
-  <form id="in-{{ r.id }}"
-        method="post"
-        action="{{ url_for('edit_time', checkin_id=r.id) }}"
-        style="display:none; margin-top:6px;">
-    <input type="hidden" name="which" value="in">
-    <input type="text" name="time" placeholder="HH:MM AM/PM or NO" size="18" required>
-    <button type="submit" style="padding:2px 8px;">Save</button>
-    <button type="button" onclick="toggleEdit('in-{{ r.id }}')" style="padding:2px 8px;">Cancel</button>
-  </form>
-</td>
+            <form id="in-{{ r.id }}"
+                  method="post"
+                  action="{{ url_for('edit_time', checkin_id=r.id) }}"
+                  style="display:none; margin-top:6px;">
+              <input type="hidden" name="which" value="in">
+              <input type="text" name="time" placeholder="HH:MM AM/PM or NO" size="18" required>
+              <button type="submit" style="padding:2px 8px;">Save</button>
+              <button type="button"
+                      onclick="toggleEdit('in-{{ r.id }}')"
+                      style="padding:2px 8px;">
+                Cancel
+              </button>
+            </form>
+          </td>
 
           <!-- ✅ Time Out -->
           <td>
-  {% if r.time_out %}
-    {% if r.time_out.strftime("%H:%M") == "00:00" %}
-      NO
-    {% else %}
-      {{ r.time_out.strftime("%I:%M %p") }}
-    {% endif %}
-  {% else %}
-    -
-  {% endif %}
+            {% if r.time_out %}
+              {{ r.time_out.strftime("%I:%M %p") }}
+            {% else %}
+              --
+            {% endif %}
 
-  <button type="button"
-          onclick="toggleEdit('out-{{ r.id }}')"
-          style="margin-left:8px; padding:2px 8px;">
-    Edit
-  </button>
+            <button type="button"
+                    onclick="toggleEdit('out-{{ r.id }}')"
+                    style="margin-left:8px; padding:2px 8px;">
+              Edit
+            </button>
 
-  <form id="out-{{ r.id }}"
-        method="post"
-        action="{{ url_for('edit_time', checkin_id=r.id) }}"
-        style="display:none; margin-top:6px;">
-    <input type="hidden" name="which" value="out">
-    <input type="text" name="time" placeholder="HH:MM AM/PM or NO" size="18" required>
-    <button type="submit" style="padding:2px 8px;">Save</button>
-    <button type="button" onclick="toggleEdit('out-{{ r.id }}')" style="padding:2px 8px;">Cancel</button>
-  </form>
-</td>
+            <form id="out-{{ r.id }}"
+                  method="post"
+                  action="{{ url_for('edit_time', checkin_id=r.id) }}"
+                  style="display:none; margin-top:6px;">
+              <input type="hidden" name="which" value="out">
+              <input type="text" name="time" placeholder="HH:MM AM/PM or NO" size="18" required>
+              <button type="submit" style="padding:2px 8px;">Save</button>
+              <button type="button"
+                      onclick="toggleEdit('out-{{ r.id }}')"
+                      style="padding:2px 8px;">
+                Cancel
+              </button>
+            </form>
+          </td>
+
           <td>
             <form method="post"
                   action="{{ url_for('delete_record', record_id=r.id) }}"
