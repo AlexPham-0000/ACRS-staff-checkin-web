@@ -171,8 +171,32 @@
       <td>{{ r.staff.name }}</td>
 
       <td class="note-cell {% if (r.note and r.note.strip()) and (not r.returned_item) %}not-returned{% endif %}">
-        {{ r.note or "" }}
-      </td>
+  {{ r.note or "" }}
+
+  <button type="button"
+          onclick="toggleEdit('note-{{ r.id }}')"
+          style="margin-left:8px; padding:2px 8px;">
+    Edit
+  </button>
+
+  <form id="note-{{ r.id }}"
+        method="post"
+        action="{{ url_for('edit_note', checkin_id=r.id) }}"
+        style="display:none; margin-top:6px;">
+    <input type="text"
+           name="note"
+           value="{{ r.note or '' }}"
+           placeholder="Type note..."
+           size="25">
+
+    <button type="submit" style="padding:2px 8px;">Save</button>
+    <button type="button"
+            onclick="toggleEdit('note-{{ r.id }}')"
+            style="padding:2px 8px;">
+      Cancel
+    </button>
+  </form>
+</td>
 
       <td>
         <form method="post" action="{{ url_for('toggle_returned', checkin_id=r.id) }}">

@@ -653,6 +653,21 @@ def edit_time(checkin_id):
     db.session.commit()
     flash("Time updated.")
     return redirect(url_for("index"))
+@app.route("/edit_note/<int:checkin_id>", methods=["POST"])
+def edit_note(checkin_id):
+    ci = CheckIn.query.get_or_404(checkin_id)
+    new_note = (request.form.get("note") or "").strip()
+
+    ci.note = new_note
+
+    # Optional: if note exists, mark returned_item = False so it highlights until checked
+    if new_note:
+        ci.returned_item = False
+
+    db.session.commit()
+    flash("Note updated.")
+    return redirect(url_for("index"))
+
 
 @app.route("/version")
 def version():
