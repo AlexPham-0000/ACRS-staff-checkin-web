@@ -598,23 +598,25 @@ def edit_time(checkin_id):
         return redirect(url_for("index"))
 
     if not tstr:
-        flash("Please enter a time or type NO.")
+        flash("Please enter a time (or type NO).")
         return redirect(url_for("index"))
 
-    t_upper = tstr.upper().strip()
+    t_upper = tstr.strip().upper()
 
-    # ✅ Allow typing NO for BOTH (no note changes)
+    # ✅ NEW: allow typing NO
     if t_upper == "NO":
-        if which == "in":
-            ci.time_in = None
-        else:
+        note_txt = ci.note or ""
+        if which == "out":
             ci.time_out = None
+            db.session.commit()
+            flash("Time Out set to NO.")
+            return redirect(url_for("index"))
+        else:  # which == "in"
+            db.session.commit()
+            flash("Time In marked as NO.")
+            return redirect(url_for("index"))
 
-        db.session.commit()
-        flash("Saved as NO.")
-        return redirect(url_for("index"))
-
-    # Parse time formats
+    # Parse time formats:
     parsed = None
     for fmt in ("%H:%M", "%I:%M %p", "%I:%M%p"):
         try:
@@ -627,21 +629,23 @@ def edit_time(checkin_id):
         flash("Time format wrong. Use 09:15 or 9:15 AM, or type NO.")
         return redirect(url_for("index"))
 
-    # Use today's date if the old datetime is missing
-    today = today_seattle()
-
+    # Keep the SAME DATE, only change the time part
     if which == "in":
         old_dt = ci.time_in
-        use_date = old_dt.date() if old_dt else today
-        ci.time_in = datetime.combine(use_date, parsed)
+        if not old_dt:
+            flash("No Time In to edit.")
+            return redirect(url_for("index"))
+        ci.time_in = datetime.combine(old_dt.date(), parsed)
 
-        if ci.time_out and ci.time_in and ci.time_out < ci.time_in:
+        if ci.time_out and ci.time_out < ci.time_in:
             flash("Warning: Time Out is earlier than Time In.")
 
     else:  # which == "out"
+        if not ci.time_out:
+            flash("No Time Out yet. Check out first, then edit. (Or type NO to mark it.)")
+            return redirect(url_for("index"))
         old_dt = ci.time_out
-        use_date = old_dt.date() if old_dt else today
-        ci.time_out = datetime.combine(use_date, parsed)
+        ci.time_out = datetime.combine(old_dt.date(), parsed)
 
         if ci.time_in and ci.time_out < ci.time_in:
             flash("Time Out cannot be earlier than Time In.")
