@@ -141,8 +141,10 @@
 
           <!-- ✅ Time In -->
           <td>
-            {% if r.time_out %}
-              {{ r.time_out.strftime("%I:%M %p") }}
+            {% if r.note and "[NO IN]" in r.note %}
+              NO
+            {% elif r.time_in %}
+              {{ r.time_in.strftime("%I:%M %p") }}
             {% else %}
               -
             {% endif %}
@@ -170,8 +172,10 @@
 
           <!-- ✅ Time Out -->
           <td>
-            {% if r.time_out %}
-              {{ r.time_out.strftime("%I:%M %p") }}
+            {% if r.note and "[NO IN]" in r.note %}
+              NO
+            {% elif r.time_in %}
+              {{ r.time_in.strftime("%I:%M %p") }}
             {% else %}
               -
             {% endif %}
