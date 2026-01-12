@@ -591,46 +591,27 @@ def edit_time(checkin_id):
     ci = CheckIn.query.get_or_404(checkin_id)
 
     which = (request.form.get("which") or "").strip().lower()   # "in" or "out"
-    tstr = (request.form.get("time") or "").strip()             # "09:15" or "9:15 AM" or "NO"
+    tstr = (request.form.get("time") or "").strip()             # "09:15" or "9:15 AM"
 
     if which not in ("in", "out"):
         flash("Invalid edit request.")
         return redirect(url_for("index"))
 
     if not tstr:
-        flash("Please enter a time (or type NO).")
+        flash("Please enter a time.")
         return redirect(url_for("index"))
-
-    t_upper = tstr.strip().upper()
-
-    # ✅ NEW: allow typing NO
-    if t_upper == "NO":
-        note_txt = ci.note or ""
-        if which == "out":
-            ci.time_out = None
-            if "-" not in note_txt:
-                ci.note = (note_txt + "-").strip()
-            db.session.commit()
-            flash("Time Out set to NO.")
-            return redirect(url_for("index"))
-        else:  # which == "in"
-            if "-" not in note_txt:
-                ci.note = (note_txt + "-").strip()
-            db.session.commit()
-            flash("Time In marked as NO.")
-            return redirect(url_for("index"))
 
     # Parse time formats:
     parsed = None
     for fmt in ("%H:%M", "%I:%M %p", "%I:%M%p"):
         try:
-            parsed = datetime.strptime(t_upper, fmt).time()
+            parsed = datetime.strptime(tstr.upper(), fmt).time()
             break
         except ValueError:
             pass
 
     if parsed is None:
-        flash("Time format wrong. Use 09:15 or 9:15 AM, or type NO.")
+        flash("Time format wrong. Use 09:15 or 9:15 AM.")
         return redirect(url_for("index"))
 
     # Keep the SAME DATE, only change the time part
@@ -641,12 +622,13 @@ def edit_time(checkin_id):
             return redirect(url_for("index"))
         ci.time_in = datetime.combine(old_dt.date(), parsed)
 
+        # optional safety: if time_out exists and becomes earlier than time_in, warn
         if ci.time_out and ci.time_out < ci.time_in:
             flash("Warning: Time Out is earlier than Time In.")
 
     else:  # which == "out"
         if not ci.time_out:
-            flash("No Time Out yet. Check out first, then edit. (Or type NO to mark it.)")
+            flash("No Time Out yet. Check out first, then edit.")
             return redirect(url_for("index"))
         old_dt = ci.time_out
         ci.time_out = datetime.combine(old_dt.date(), parsed)

@@ -141,12 +141,10 @@
 
           <!-- ✅ Time In -->
           <td>
-              {% if r.note and "-" in r.note %}
-                  NO
-              {% elif r.time_in %}
+              {% if r.time_in %}
                 {{ r.time_in.strftime("%I:%M %p") }}
               {% else %}
-                -
+                --
               {% endif %}
 
             <button type="button"
@@ -172,13 +170,11 @@
 
           <!-- ✅ Time Out -->
           <td>
-            {% if r.note and "-" in r.note %}
-  NO
-{% elif r.time_out %}
-  {{ r.time_out.strftime("%I:%M %p") }}
-{% else %}
-  -
-{% endif %}
+            {% if r.time_out %}
+              {{ r.time_out.strftime("%I:%M %p") }}
+            {% else %}
+              --
+            {% endif %}
 
             <button type="button"
                     onclick="toggleEdit('out-{{ r.id }}')"
