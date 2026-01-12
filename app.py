@@ -15,8 +15,6 @@ import io
 from flask import send_file
 from datetime import time as dtime
 
-
-
 SEA_TZ = ZoneInfo("America/Los_Angeles")
 
 def now_seattle_naive():
@@ -24,7 +22,6 @@ def now_seattle_naive():
 
 def today_seattle():
     return now_seattle_naive().date()
-
 
 app = Flask(__name__)
 
@@ -51,8 +48,6 @@ STAFF_DOCX_PATH = os.path.join(os.path.dirname(__file__), "ACRSstaff_name.docx")
 
 STAFF_DOCX_PATH = "ACRSstaff_name.docx"
 
-
-
 def add_staff_to_docx(new_name: str) -> bool:
     """Add a staff name to docx if not exists. Return True if added, False if duplicate."""
     new_name = (new_name or "").strip()
@@ -74,8 +69,6 @@ def add_staff_to_docx(new_name: str) -> bool:
     doc.save(STAFF_DOCX_PATH)
 
     return True
-
-
 
 def load_staff_names_from_docx(path: str) -> list[str]:
     names = []
@@ -125,7 +118,6 @@ DEPARTMENTS = [
     "GENOA",
 ]
 
-
 # --------- Models (bảng trong DB) ---------
 class Staff(db.Model):
     __tablename__ = "staff"
@@ -133,7 +125,6 @@ class Staff(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     department = db.Column(db.String(120), nullable=False)
-
 
 class CheckIn(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -145,12 +136,9 @@ class CheckIn(db.Model):
 
     staff = db.relationship("Staff", backref=db.backref("checkins", lazy=True))
 
-
 # Tạo bảng nếu chưa có
 with app.app_context():
     db.create_all()
-
-
 
 # --------- Trang chính: Today Check-ins ---------
 @app.route("/", methods=["GET", "POST"])
@@ -313,8 +301,21 @@ def index():
         )
         .all()
     )
+
     ## ✅ PIN NOTE STAFF TO TOP
     records = sorted(records, key=lambda r: 0 if (r.note and r.note.strip()) else 1)
+
+    db_names = [n for (n,) in db.session.query(Staff.name).distinct().all()]
+    staff_list = sorted(set(ALLOWED_STAFF_NAMES + db_names), key=str.lower)
+
+    return render_template(
+        "index.html",
+        records=records,
+        today=today,
+        departments=DEPARTMENTS,
+        staff_list=staff_list,
+        staff_names=ALLOWED_STAFF_NAMES
+    )
 
 # --------- Trang admin ---------
 @app.route("/admin")
@@ -344,7 +345,6 @@ def admin():
         staff_list=staff_list,
         records=records,
     )
-
 
 import pandas as pd
 
@@ -519,7 +519,6 @@ def export_excel():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
-
 @app.route("/toggle_returned/<int:checkin_id>", methods=["POST"])
 def toggle_returned(checkin_id):
     ci = CheckIn.query.get_or_404(checkin_id)
@@ -642,20 +641,6 @@ def edit_time(checkin_id):
     flash("Time updated.")
     return redirect(url_for("index"))
 
-@app.route("/edit_note/<int:checkin_id>", methods=["POST"])
-def edit_note(checkin_id):
-    ci = CheckIn.query.get_or_404(checkin_id)
-    new_note = (request.form.get("note") or "").strip()
-
-    ci.note = new_note
-
-    if new_note:
-        ci.returned_item = False
-
-    db.session.commit()
-    flash("Note updated.")
-    return redirect(url_for("index"))
-
 @app.route("/version")
 def version():
     last_id = db.session.query(func.max(CheckIn.id)).scalar() or 0
@@ -664,7 +649,6 @@ def version():
 
     # convert None to empty string
     return f"{last_id}|{last_in or ''}|{last_out or ''}"
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
