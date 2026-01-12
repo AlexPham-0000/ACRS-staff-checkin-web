@@ -141,11 +141,15 @@
 
           <!-- ✅ Time In -->
           <td>
-              {% if r.time_in %}
-                {{ r.time_in.strftime("%I:%M %p") }}
-              {% else %}
-                --
-              {% endif %}
+              {% if ti %}
+  {% if ti.strftime("%H:%M") == "00:00" %}
+    NO
+  {% else %}
+    {{ ti.strftime("%I:%M %p") }}
+  {% endif %}
+{% else %}
+  -
+{% endif %}
 
             <button type="button"
                     onclick="toggleEdit('in-{{ r.id }}')"
@@ -170,11 +174,15 @@
 
           <!-- ✅ Time Out -->
           <td>
-            {% if r.time_out %}
-              {{ r.time_out.strftime("%I:%M %p") }}
-            {% else %}
-              --
-            {% endif %}
+            {% if to %}
+  {% if to.strftime("%H:%M") == "00:00" %}
+    NO
+  {% else %}
+    {{ to.strftime("%I:%M %p") }}
+  {% endif %}
+{% else %}
+  -
+{% endif %}
 
             <button type="button"
                     onclick="toggleEdit('out-{{ r.id }}')"

@@ -14,6 +14,12 @@ from datetime import datetime
 import io
 from flask import send_file
 from datetime import time as dtime
+from datetime import time as dtime
+
+NO_TIME = dtime(0, 0)  # 12:00 AM means "NO"
+
+def is_no_time(dt_obj):
+    return bool(dt_obj) and dt_obj.time() == NO_TIME
 
 SEA_TZ = ZoneInfo("America/Los_Angeles")
 
@@ -591,47 +597,63 @@ def edit_time(checkin_id):
     ci = CheckIn.query.get_or_404(checkin_id)
 
     which = (request.form.get("which") or "").strip().lower()   # "in" or "out"
-    tstr = (request.form.get("time") or "").strip()             # "09:15" or "9:15 AM"
+    tstr = (request.form.get("time") or "").strip()             # "09:15" or "9:15 AM" or "NO"
 
     if which not in ("in", "out"):
         flash("Invalid edit request.")
         return redirect(url_for("index"))
 
     if not tstr:
-        flash("Please enter a time.")
+        flash("Please enter a time or type NO.")
+        return redirect(url_for("index"))
+
+    t_upper = tstr.strip().upper()
+
+    # ✅ Allow typing NO (save as 12:00 AM)
+    if t_upper == "NO":
+        today = today_seattle()
+
+        if which == "in":
+            base_date = ci.time_in.date() if ci.time_in else today
+            ci.time_in = datetime.combine(base_date, NO_TIME)
+        else:  # which == "out"
+            # use time_out date if exists, else use time_in date if exists, else today
+            base_date = (
+                ci.time_out.date() if ci.time_out else
+                (ci.time_in.date() if ci.time_in else today)
+            )
+            ci.time_out = datetime.combine(base_date, NO_TIME)
+
+        db.session.commit()
+        flash("Saved as NO.")
         return redirect(url_for("index"))
 
     # Parse time formats:
     parsed = None
     for fmt in ("%H:%M", "%I:%M %p", "%I:%M%p"):
         try:
-            parsed = datetime.strptime(tstr.upper(), fmt).time()
+            parsed = datetime.strptime(t_upper, fmt).time()
             break
         except ValueError:
             pass
 
     if parsed is None:
-        flash("Time format wrong. Use 09:15 or 9:15 AM.")
+        flash("Time format wrong. Use 09:15 or 9:15 AM, or type NO.")
         return redirect(url_for("index"))
 
     # Keep the SAME DATE, only change the time part
-    if which == "in":
-        old_dt = ci.time_in
-        if not old_dt:
-            flash("No Time In to edit.")
-            return redirect(url_for("index"))
-        ci.time_in = datetime.combine(old_dt.date(), parsed)
+    today = today_seattle()
 
-        # optional safety: if time_out exists and becomes earlier than time_in, warn
+    if which == "in":
+        base_date = ci.time_in.date() if ci.time_in else today
+        ci.time_in = datetime.combine(base_date, parsed)
+
         if ci.time_out and ci.time_out < ci.time_in:
             flash("Warning: Time Out is earlier than Time In.")
 
     else:  # which == "out"
-        if not ci.time_out:
-            flash("No Time Out yet. Check out first, then edit.")
-            return redirect(url_for("index"))
-        old_dt = ci.time_out
-        ci.time_out = datetime.combine(old_dt.date(), parsed)
+        base_date = ci.time_out.date() if ci.time_out else (ci.time_in.date() if ci.time_in else today)
+        ci.time_out = datetime.combine(base_date, parsed)
 
         if ci.time_in and ci.time_out < ci.time_in:
             flash("Time Out cannot be earlier than Time In.")
