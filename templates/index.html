@@ -141,7 +141,9 @@
 
           <!-- ✅ Time In -->
           <td>
-            {% if r.time_in %}
+            {% if r.note and "[NO IN]" in r.note %}
+                NO
+            {% elif r.time_in %}
               {{ r.time_in.strftime("%I:%M %p") }}
             {% else %}
               -
@@ -170,7 +172,9 @@
 
           <!-- ✅ Time Out -->
           <td>
-            {% if r.time_out %}
+            {% if r.note and "[NO OUT]" in r.note %}
+                NO
+            {% elif r.time_out %}
               {{ r.time_out.strftime("%I:%M %p") }}
             {% else %}
               -
@@ -187,7 +191,7 @@
                   action="{{ url_for('edit_time', checkin_id=r.id) }}"
                   style="display:none; margin-top:6px;">
               <input type="hidden" name="which" value="out">
-              <input type="text" name="time" placeholder="HH:MM AM/PM (ex: 3:05 PM)" size="18" required>
+              <input type="text" name="time" placeholder="HH:MM AM/PM or NO" size="18" required>
               <button type="submit" style="padding:2px 8px;">Save</button>
               <button type="button"
                       onclick="toggleEdit('out-{{ r.id }}')"
