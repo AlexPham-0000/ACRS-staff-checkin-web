@@ -14,12 +14,6 @@ from datetime import datetime
 import io
 from flask import send_file
 from datetime import time as dtime
-from datetime import time as dtime
-
-NO_TIME = dtime(0, 0)  # 12:00 AM means "NO"
-
-def is_no_time(dt_obj):
-    return bool(dt_obj) and dt_obj.time() == NO_TIME
 
 SEA_TZ = ZoneInfo("America/Los_Angeles")
 
